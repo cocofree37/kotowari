@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>星と手のひらの占い</title>
+<style>
+  :root { --bg:#12122a; --card:#1c1c3d; --line:#33336b; --text:#ecebff; --sub:#a9a8d6; --accent:#f2c86b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:radial-gradient(circle at 50% -10%, #2a2a63, var(--bg) 60%); color:var(--text);
+         font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif; line-height:1.7; min-height:100vh; }
+  main { max-width:560px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:1.5rem; text-align:center; margin:8px 0 4px; letter-spacing:.08em; }
+  .lead { text-align:center; color:var(--sub); margin:0 0 24px; font-size:.9rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px; }
+  label, legend { display:block; font-weight:600; margin-bottom:6px; font-size:.9rem; }
+  .opt { color:var(--sub); font-weight:400; font-size:.8rem; }
+  input[type=date], input[type=time], input[type=file] { width:100%; padding:10px; border-radius:10px; border:1px solid var(--line);
+         background:#14142f; color:var(--text); font-size:1rem; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  fieldset { border:0; padding:0; margin:0; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chips label { margin:0; font-weight:400; }
+  .chips input { position:absolute; opacity:0; }
+  .chips span { display:inline-block; padding:8px 16px; border:1px solid var(--line); border-radius:999px; cursor:pointer; }
+  .chips input:checked + span { background:var(--accent); color:#222; border-color:var(--accent); font-weight:600; }
+  .chips input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
+  button { width:100%; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#222; font-size:1.05rem;
+           font-weight:700; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  #preview { display:none; width:100%; max-height:220px; object-fit:contain; margin-top:10px; border-radius:10px; }
+  .hint { color:var(--sub); font-size:.8rem; margin:6px 0 0; }
+  #error { color:#ff9c9c; margin:12px 0 0; min-height:1.2em; }
+  #result { display:none; }
+  .headline { font-size:1.25rem; color:var(--accent); margin:0 0 8px; }
+  h2 { font-size:1rem; margin:0 0 8px; color:var(--accent); }
+  .facts { display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:.85rem; }
+  .facts div { background:#14142f; border-radius:10px; padding:8px 10px; }
+  .facts b { display:block; color:var(--sub); font-weight:400; font-size:.75rem; }
+  dl { margin:0; } dt { font-weight:600; margin-top:8px; } dd { margin:0; color:#d8d7f5; }
+  .scores { display:flex; justify-content:space-between; text-align:center; }
+  .stars { color:var(--accent); letter-spacing:.1em; }
+  .notice { color:var(--sub); font-size:.75rem; text-align:center; margin-top:24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>✦ 星と手のひらの占い ✦</h1>
+  <p class="lead">生年月日と手相から、今日のあなたを読み解きます</p>
+
+  <form id="form" class="card" novalidate>
+    <div class="row">
+      <div>
+        <label for="birthDate">生年月日</label>
+        <input type="date" id="birthDate" required min="1900-01-01">
+      </div>
+      <div>
+        <label for="birthTime">出生時刻 <span class="opt">(任意)</span></label>
+        <input type="time" id="birthTime">
+      </div>
+    </div>
+
+    <fieldset style="margin-top:16px">
+      <legend>今いちばん気になること</legend>
+      <div class="chips">
+        <label><input type="radio" name="concern" value="恋愛" checked><span>恋愛</span></label>
+        <label><input type="radio" name="concern" value="仕事"><span>仕事</span></label>
+        <label><input type="radio" name="concern" value="金運"><span>金運</span></label>
+        <label><input type="radio" name="concern" value="人間関係"><span>人間関係</span></label>
+      </div>
+    </fieldset>
+
+    <div style="margin-top:16px">
+      <label for="palm">手相の写真 <span class="opt">(任意)</span></label>
+      <input type="file" id="palm" accept="image/*">
+      <img id="preview" alt="手相プレビュー">
+      <p class="hint">手のひらを明るい場所で正面から撮影してください。画像は占いの解析にのみ使用し、保存しません。</p>
+    </div>
+
+    <p id="error" role="alert"></p>
+    <button type="submit" id="submit">占う</button>
+  </form>
+
+  <section id="result" aria-live="polite">
+    <div class="card"><p class="headline" id="headline"></p><p id="overall"></p></div>
+    <div class="card"><h2 id="concernTitle"></h2><p id="concern"></p></div>
+    <div class="card" id="palmCard"><h2>手相</h2><dl id="palmBody"></dl></div>
+    <div class="card"><h2>ラッキー</h2><dl id="lucky"></dl></div>
+    <div class="card"><h2>運勢</h2><div class="scores" id="scores"></div></div>
+    <div class="card"><h2>算出データ</h2><div class="facts" id="facts"></div></div>
+  </section>
+
+  <p class="notice">この占いはエンターテインメント目的です。健康・医療・投資などの判断は専門家にご相談ください。</p>
+</main>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
