@@ -2,10 +2,10 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildFacts } from './lib/calc.js';
+import { buildFacts } from './docs/lib/calc.js';
 import { generateReading } from './lib/reading.js';
 
-const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), 'public');
+const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), 'docs');
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_BODY = 6 * 1024 * 1024;
 const CONCERNS = ['恋愛', '仕事', '金運', '人間関係'];

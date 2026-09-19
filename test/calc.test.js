@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dayPillar, sunSign, lifePathNumber, etoOfYear, hourBranch, buildFacts } from './calc.js';
+import { dayPillar, sunSign, lifePathNumber, etoOfYear, hourBranch, buildFacts } from '../docs/lib/calc.js';
 
 test('日柱: 2000-01-01 は戊午', () => {
   assert.equal(dayPillar(2000, 1, 1).name, '戊午');

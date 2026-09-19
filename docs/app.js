@@ -1,3 +1,6 @@
+import { buildFacts } from './lib/calc.js';
+import { fallbackReading } from './lib/fallback.js';
+
 const $ = (id) => document.getElementById(id);
 const form = $('form');
 let palmImage = null;
@@ -63,7 +66,7 @@ function render({ facts, reading }) {
     addDef(palmBody, '生命線', p.life); addDef(palmBody, '感情線', p.heart);
     addDef(palmBody, '頭脳線', p.head); addDef(palmBody, '運命線', p.fate);
   } else {
-    addDef(palmBody, '', palmImage ? '手のひらを読み取れませんでした。明るい場所で、手のひら全体が写るように撮り直してください。' : '手相の写真を追加すると、手相も占えます。');
+    addDef(palmBody, '', reading.source === 'fallback' ? '手相解析はAI連携(サーバー版)で利用できます。' : palmImage ? '手のひらを読み取れませんでした。明るい場所で、手のひら全体が写るように撮り直してください。' : '手相の写真を追加すると、手相も占えます。');
   }
 
   const lucky = $('lucky');
@@ -101,6 +104,29 @@ function render({ facts, reading }) {
   $('result').scrollIntoView({ behavior: 'smooth' });
 }
 
+// サーバー(/api/reading)があれば Claude の結果を、無ければ(GitHub Pages 等)ブラウザ内の簡易結果を返す
+async function requestReading(payload) {
+  let res;
+  try {
+    res = await fetch('api/reading', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    res = null;
+  }
+  const isApi = res && (res.headers.get('content-type') || '').includes('application/json');
+  if (isApi) {
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '占いに失敗しました');
+    return data;
+  }
+  const facts = buildFacts({ birthDate: payload.birthDate, birthTime: payload.birthTime, today: payload.today });
+  $('mode').textContent = '静的公開版のため、AIによる文章生成と手相解析は利用できません(算出データに基づく簡易結果です)。';
+  return { facts, reading: fallbackReading(facts, payload.concern, null, '静的公開版の簡易表示です') };
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const err = $('error');
@@ -111,19 +137,15 @@ form.addEventListener('submit', async (e) => {
   btn.disabled = true;
   btn.textContent = '星を読んでいます…';
   try {
-    const res = await fetch('/api/reading', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        birthDate: $('birthDate').value,
-        birthTime: $('birthTime').value || null,
-        concern: form.concern.value,
-        palmImage,
-        today: todayLocal(),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '占いに失敗しました');
+    const payload = {
+      birthDate: $('birthDate').value,
+      birthTime: $('birthTime').value || null,
+      concern: form.concern.value,
+      palmImage,
+      today: todayLocal(),
+    };
+    $('mode').textContent = '';
+    const data = await requestReading(payload);
     render(data);
   } catch (ex) {
     err.textContent = ex.message;
