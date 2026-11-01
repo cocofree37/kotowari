@@ -39,11 +39,37 @@ radioGroup($('sleepBox'), 'sleep', SLEEP);
 radioGroup($('moodBox'), 'mood', MOOD);
 radioGroup($('focusBox'), 'focus', FOCUS);
 
+// ---- 生年月日: 年は1980を初期値にして、月・日は選んでもらう ----
+const DEFAULT_BIRTH_YEAR = 1980;
+const pad2 = (n) => String(n).padStart(2, '0');
+
+function fillSelect(sel, pairs) {
+  for (const [value, label] of pairs) sel.append(Object.assign(document.createElement('option'), { value, textContent: label }));
+}
+const range = (from, to, step = 1) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
+fillSelect($('birthYear'), range(new Date().getFullYear(), 1920, -1).map((y) => [y, `${y}年`]));
+fillSelect($('birthMonth'), [['', '月'], ...range(1, 12).map((m) => [m, `${m}月`])]);
+fillSelect($('birthDay'), [['', '日'], ...range(1, 31).map((d) => [d, `${d}日`])]);
+$('birthYear').value = String(DEFAULT_BIRTH_YEAR);
+
+// 'YYYY-MM-DD' を返す。月・日が未選択なら ''、存在しない日付(2/30 など)なら null
+function getBirthDate() {
+  const [y, m, d] = ['birthYear', 'birthMonth', 'birthDay'].map((id) => Number($(id).value));
+  if (!m || !d) return '';
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCMonth() === m - 1 ? `${y}-${pad2(m)}-${pad2(d)}` : null;
+}
+
 const saved = store.get('kotowari.birth');
 if (saved) {
   try {
     const { date, time } = JSON.parse(saved);
-    $('birthDate').value = date || '';
+    const [y, m, d] = String(date).split('-').map(Number);
+    if (y >= 1920 && y <= new Date().getFullYear() && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      $('birthYear').value = String(y);
+      $('birthMonth').value = String(m);
+      $('birthDay').value = String(d);
+    }
     $('birthTime').value = time || '';
   } catch { /* 壊れた値は無視 */ }
 }
@@ -309,16 +335,18 @@ form.addEventListener('submit', async (e) => {
       energy: picked('energy'), sleep: picked('sleep'), mood: picked('mood'), focus: picked('focus'), memo: $('memo').value,
     });
   } catch (ex) { err.textContent = ex.message; return; }
-  if (!$('birthDate').value) { err.textContent = '生年月日を入力してください'; return; }
+  const birthDate = getBirthDate();
+  if (birthDate === '') { err.textContent = '生年月日の月と日を選んでください'; return; }
+  if (birthDate === null) { err.textContent = '存在しない日付です。月と日を確認してください'; return; }
 
-  store.set('kotowari.birth', JSON.stringify({ date: $('birthDate').value, time: $('birthTime').value }));
+  store.set('kotowari.birth', JSON.stringify({ date: birthDate, time: $('birthTime').value }));
 
   const btn = $('submit');
   btn.disabled = true;
   btn.textContent = '診断しています…(30秒ほどかかることがあります)';
   try {
     render(await requestReading({
-      birthDate: $('birthDate').value,
+      birthDate,
       birthTime: $('birthTime').value || null,
       condition,
       faceImage: face.image,

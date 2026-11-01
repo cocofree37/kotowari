@@ -21,20 +21,19 @@
   button { cursor:pointer; }
   :focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
 
-  /* 左のタイトル欄(広い画面では固定) */
-  .site { padding:20px 16px 0; }
-  .site .legal { font-size:9px; letter-spacing:.06em; margin:0; line-height:1.6; }
-  .site h1 { font-size:15px; font-weight:400; letter-spacing:.02em; line-height:1.5; margin:2px 0 12px; }
-  .site .en { font-size:10px; letter-spacing:.03em; line-height:1.7; margin:0; }
+  /* 中央のタイトル */
+  .site { text-align:center; padding:56px 16px 0; }
+  .site .legal { font-size:10px; letter-spacing:.14em; margin:0 0 10px; line-height:1.6; color:var(--mute); }
+  .site h1 { font-size:24px; font-weight:400; letter-spacing:.16em; line-height:1.5; margin:0 0 12px; }
+  .site h1 small { display:block; font-size:12px; letter-spacing:.3em; margin-bottom:4px; }
+  .site .en { font-size:10px; letter-spacing:.3em; text-transform:uppercase; line-height:1.7; margin:0; color:var(--mute); }
   .rail { display:none; }
   @media (min-width:960px) {
-    body { padding-left:280px; }
-    .site { position:fixed; inset:0 auto 0 0; width:280px; padding:28px 24px; }
-    .rail { display:block; position:fixed; left:12px; bottom:28px; writing-mode:vertical-rl; font-size:10px; letter-spacing:.08em; color:var(--ink); }
+    .rail { display:block; position:fixed; left:16px; bottom:28px; writing-mode:vertical-rl; font-size:10px; letter-spacing:.08em; color:var(--ink); }
   }
 
-  main { max-width:640px; margin:0 auto; padding:24px 16px 72px; }
-  .lead { font-size:13px; color:var(--mute); margin:0 0 28px; }
+  main { max-width:640px; margin:0 auto; padding:32px 16px 72px; }
+  .lead { font-size:13px; color:var(--mute); margin:0 0 32px; text-align:center; }
 
   /* タグ(細い枠線の小さな四角) */
   .tag { display:inline-block; font-size:12px; line-height:1.5; padding:0 8px; border:1px solid var(--mute); color:var(--mute); letter-spacing:.06em; }
@@ -54,7 +53,10 @@
   .opt { color:var(--mute); font-weight:400; font-size:12px; }
   input[type=date], input[type=time], textarea { width:100%; padding:10px 12px; border:1px solid var(--mute); border-radius:0; background:#fff; font-size:16px; }
   textarea { resize:vertical; min-height:80px; line-height:1.7; }
-  .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .row { display:grid; gap:16px; }
+  .ymd { display:grid; grid-template-columns:1.5fr 1fr 1fr; gap:8px; }
+  select { width:100%; padding:10px 26px 10px 12px; border:1px solid var(--mute); border-radius:0; background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E") no-repeat right 10px center; -webkit-appearance:none; appearance:none; font-size:16px; cursor:pointer; }
+  input[type=time] { max-width:200px; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; }
   .chips label, .energy label { margin:0; font-weight:400; }
   .chips input, .energy input { position:absolute; opacity:0; }
@@ -137,8 +139,8 @@
 <body>
 <header class="site">
   <p class="legal">今日の調子 × 運気</p>
-  <h1>kotowari<br>今日のやる気ナビ</h1>
-  <p class="en">Daily<br>Motivation<br>Navigator</p>
+  <h1><small>kotowari</small>今日のやる気ナビ</h1>
+  <p class="en">Daily Motivation Navigator</p>
 </header>
 <p class="rail" aria-hidden="true">© kotowari</p>
 
@@ -187,8 +189,12 @@
       <p class="step"><span class="tag">STEP 3</span>生まれの情報</p>
       <div class="row">
         <div>
-          <label for="birthDate">生年月日</label>
-          <input type="date" id="birthDate" required min="1900-01-01">
+          <label for="birthYear">生年月日</label>
+          <div class="ymd">
+            <select id="birthYear" aria-label="年"></select>
+            <select id="birthMonth" aria-label="月"></select>
+            <select id="birthDay" aria-label="日"></select>
+          </div>
         </div>
         <div>
           <label for="birthTime">出生時刻 <span class="opt">任意</span></label>
