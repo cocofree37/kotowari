@@ -24,7 +24,7 @@ function radioGroup(box, name, items, { energy = false } = {}) {
     const input = Object.assign(document.createElement('input'), { type: 'radio', name, value });
     const span = document.createElement('span');
     if (energy) {
-      const b = document.createElement('b'); b.textContent = it.emoji;
+      const b = document.createElement('b'); b.textContent = String(it.v);
       span.append(b, document.createTextNode(it.label));
     } else {
       span.textContent = it;
@@ -156,11 +156,14 @@ function card(title, children, cls) {
   return c;
 }
 
-function defList(pairs) {
-  const dl = el('dl');
+// rows: 見出しをタグ風に縦積み(長文向け) / short: 見出しと値を横並びの罫線表(短い値向け)
+function defList(pairs, kind = 'rows') {
+  const dl = el('dl', kind);
   for (const [term, desc] of pairs) {
     if (!desc) continue;
-    dl.append(el('dt', null, term), el('dd', null, desc));
+    const dt = el('dt');
+    if (kind === 'rows') dt.append(el('span', 'tag', term)); else dt.textContent = term;
+    dl.append(dt, el('dd', null, desc));
   }
   return dl;
 }
@@ -176,7 +179,7 @@ function meters(m = {}) {
     const fill = el('i');
     fill.style.width = `${v * 20}%`;
     bar.append(fill);
-    row.append(el('span', null, label), bar, el('span', null, `${v}/5`));
+    row.append(el('span', null, label), bar, el('span', 'v', `${v}/5`));
     box.append(row);
   }
   return box;
@@ -193,10 +196,14 @@ function render({ facts, reading: r }) {
   const out = $('result');
   out.replaceChildren();
 
-  // 診断の核(モード・合言葉)
+  // 診断の核(モード・合言葉): 黒いパネルに縦書き
   const hero = el('div', 'card hero');
-  hero.append(el('p', 'mode', r.mode?.name), el('p', 'headline', r.headline), el('p', 'why', r.mode?.reason));
-  if (r.mantra) hero.append(el('span', 'mantra', `「${r.mantra}」`));
+  const wd = ['日', '月', '火', '水', '木', '金', '土'][new Date(`${facts.today.date}T00:00:00`).getDay()];
+  hero.append(el('p', 'date', `/ ${facts.today.date.replaceAll('-', '.')} (${wd})`));
+  const vert = el('div', 'vert');
+  vert.append(el('p', 'vmode', r.mode?.name));
+  if (r.mantra) vert.append(el('p', 'vmantra', r.mantra));
+  hero.append(vert, el('p', 'headline', r.headline), el('p', 'why', r.mode?.reason));
   out.append(hero);
 
   out.append(card('今日のコンディション', [meters(r.meter)]));
@@ -210,7 +217,7 @@ function render({ facts, reading: r }) {
       : '顔を読み取れませんでした。明るい場所で、顔全体が写るように撮り直してください。')));
   }
 
-  out.append(card('占いの背景', paragraphs(r.background)));
+  out.append(card('今日の運気の流れ', paragraphs(r.background)));
 
   if (r.schedule) {
     out.append(card('今日の時間の使い方', [defList([['午前', r.schedule.morning], ['午後', r.schedule.afternoon], ['夕方〜夜', r.schedule.evening]])]));
@@ -224,10 +231,10 @@ function render({ facts, reading: r }) {
       ol.append(li);
     }
     const c = card('今日のミッション', [ol]);
-    const copy = el('button', 'ghost copy', '📋 ミッションをコピー');
+    const copy = el('button', 'ghost copy', 'ミッションをコピー');
     copy.type = 'button';
     copy.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(summaryText(r, facts)); copy.textContent = '✔ コピーしました'; }
+      try { await navigator.clipboard.writeText(summaryText(r, facts)); copy.textContent = 'コピーしました'; }
       catch { copy.textContent = 'コピーできませんでした'; }
     });
     c.append(copy);
@@ -238,7 +245,7 @@ function render({ facts, reading: r }) {
   out.append(card('今日の落とし穴とリセット法', [defList([['落とし穴', r.pitfall], ['リセット法', r.reset]])]));
 
   const l = r.lucky || {};
-  out.append(card('今日のラッキー', [defList([['勝負時間帯', l.time], ['ラッキーカラー', l.color], ['ラッキーアイテム', l.item], ['吉方位', l.direction]])]));
+  out.append(card('今日のラッキー', [defList([['勝負時間帯', l.time], ['ラッキーカラー', l.color], ['ラッキーアイテム', l.item], ['吉方位', l.direction]], 'short')]));
 
   const p = r.palm;
   if (p && p.detected) {

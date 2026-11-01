@@ -4,89 +4,150 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>kotowari 今日のやる気ナビ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Noto+Sans+JP:wght@400;500&family=Noto+Serif+JP:wght@500;600&display=swap">
 <style>
-  :root { --bg:#10142b; --card:#1a2040; --card2:#141935; --line:#2f3a6e; --text:#eef0ff; --sub:#a4abd6; --accent:#f2c86b; --ok:#7fd6a8; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:radial-gradient(circle at 50% -10%, #263066, var(--bg) 60%); color:var(--text);
-         font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif; line-height:1.8; min-height:100vh; }
-  main { max-width:620px; margin:0 auto; padding:24px 16px 64px; }
-  h1 { font-size:1.4rem; text-align:center; margin:8px 0 4px; letter-spacing:.06em; }
-  .lead { text-align:center; color:var(--sub); margin:0 0 24px; font-size:.9rem; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px; }
-  .step { color:var(--accent); font-size:.8rem; font-weight:700; letter-spacing:.08em; margin:0 0 8px; }
-  label, legend { display:block; font-weight:600; margin-bottom:6px; font-size:.9rem; }
-  .opt { color:var(--sub); font-weight:400; font-size:.8rem; }
-  input[type=date], input[type=time], textarea { width:100%; padding:10px; border-radius:10px; border:1px solid var(--line);
-         background:var(--card2); color:var(--text); font:inherit; font-size:1rem; }
-  textarea { resize:vertical; min-height:72px; }
+  :root {
+    --bg:#fafafa; --ink:#000; --mute:#666; --line:#d2d2d2; --panel:#221e1e; --err:#b3001b;
+    --sans:Inter,"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+    --serif:"Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;
+  }
+  *, *::before, *::after { box-sizing:border-box; }
+  html { -webkit-text-size-adjust:100%; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.95; letter-spacing:.04em; }
+  h1, h2, p, dl, dd, ol, fieldset { margin:0; padding:0; }
+  button, input, textarea { font:inherit; letter-spacing:inherit; color:inherit; }
+  button { cursor:pointer; }
+  :focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+
+  /* 左のタイトル欄(広い画面では固定) */
+  .site { padding:20px 16px 0; }
+  .site .legal { font-size:9px; letter-spacing:.06em; margin:0; line-height:1.6; }
+  .site h1 { font-size:15px; font-weight:400; letter-spacing:.02em; line-height:1.5; margin:2px 0 12px; }
+  .site .en { font-size:10px; letter-spacing:.03em; line-height:1.7; margin:0; }
+  .rail { display:none; }
+  @media (min-width:960px) {
+    body { padding-left:280px; }
+    .site { position:fixed; inset:0 auto 0 0; width:280px; padding:28px 24px; }
+    .rail { display:block; position:fixed; left:12px; bottom:28px; writing-mode:vertical-rl; font-size:10px; letter-spacing:.08em; color:var(--ink); }
+  }
+
+  main { max-width:640px; margin:0 auto; padding:24px 16px 72px; }
+  .lead { font-size:13px; color:var(--mute); margin:0 0 28px; }
+
+  /* タグ(細い枠線の小さな四角) */
+  .tag { display:inline-block; font-size:12px; line-height:1.5; padding:0 8px; border:1px solid var(--mute); color:var(--mute); letter-spacing:.06em; }
+  .tag.solid { background:var(--mute); color:#fff; }
+
+  /* セクション: 罫線で区切る */
+  .card, .block { padding:28px 0; border-top:1px solid var(--line); }
+  h2 { font-size:14px; font-weight:500; letter-spacing:.1em; margin-bottom:14px; }
+  h2::before { content:"/ "; color:var(--mute); }
+  .step { display:flex; align-items:center; gap:10px; margin-bottom:18px; font-size:14px; font-weight:500; letter-spacing:.1em; }
+  .card p + p { margin-top:.9em; }
+
+  /* フォーム */
+  fieldset { border:0; margin-bottom:22px; min-width:0; }
+  legend { padding:0; font-size:13px; font-weight:500; margin-bottom:8px; letter-spacing:.08em; }
+  label { display:block; font-size:13px; font-weight:500; margin-bottom:6px; letter-spacing:.08em; }
+  .opt { color:var(--mute); font-weight:400; font-size:12px; }
+  input[type=date], input[type=time], textarea { width:100%; padding:10px 12px; border:1px solid var(--mute); border-radius:0; background:#fff; font-size:16px; }
+  textarea { resize:vertical; min-height:80px; line-height:1.7; }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  fieldset { border:0; padding:0; margin:0 0 16px; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; }
-  .chips label { margin:0; font-weight:400; }
-  .chips input { position:absolute; opacity:0; }
-  .chips span { display:inline-block; padding:8px 14px; border:1px solid var(--line); border-radius:999px; cursor:pointer; }
-  .chips input:checked + span { background:var(--accent); color:#222; border-color:var(--accent); font-weight:600; }
-  .chips input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
+  .chips label, .energy label { margin:0; font-weight:400; }
+  .chips input, .energy input { position:absolute; opacity:0; }
+  .chips span { display:inline-block; padding:6px 14px; border:1px solid var(--mute); background:#fff; cursor:pointer; font-size:14px; }
+  .chips input:checked + span, .energy input:checked + span { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .chips input:focus-visible + span, .energy input:focus-visible + span { outline:2px solid var(--ink); outline-offset:2px; }
   .energy { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
-  .energy label { margin:0; font-weight:400; }
-  .energy span { display:flex; flex-direction:column; align-items:center; padding:8px 2px; border:1px solid var(--line); border-radius:12px; cursor:pointer; font-size:.7rem; color:var(--sub); }
-  .energy span b { font-size:1.6rem; line-height:1.3; }
-  .energy input:checked + span { background:var(--accent); color:#222; border-color:var(--accent); font-weight:700; }
-  .energy input { position:absolute; opacity:0; }
-  .energy input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
-  button { font:inherit; cursor:pointer; }
-  .primary { width:100%; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#222; font-size:1.05rem; font-weight:700; }
-  .primary:disabled { opacity:.6; cursor:wait; }
-  .ghost { padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:var(--card2); color:var(--text); }
+  .energy span { display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px 6px; border:1px solid var(--mute); background:#fff; cursor:pointer; font-size:11px; color:var(--mute); }
+  .energy span b { font-family:Inter,sans-serif; font-weight:400; font-size:1.5rem; line-height:1.2; color:var(--ink); letter-spacing:0; }
+  .energy input:checked + span { color:#fff; }
+  .energy input:checked + span b { color:#fff; }
+
+  /* ボタン */
+  .primary { width:100%; padding:16px; border:0; border-radius:0; background:var(--ink); color:#fff; font-size:15px; letter-spacing:.16em; }
+  .primary:hover:not(:disabled) { background:#333; }
+  .primary:disabled { opacity:.55; cursor:wait; }
+  .ghost { padding:9px 14px; border:1px solid var(--ink); border-radius:0; background:transparent; font-size:13px; letter-spacing:.06em; }
+  .ghost:hover { background:var(--ink); color:#fff; }
   .photo-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
-  .photo-actions .ghost { flex:1; min-width:130px; }
-  .preview { display:none; width:100%; max-height:240px; object-fit:contain; margin-top:10px; border-radius:10px; background:#000; }
-  .hint { color:var(--sub); font-size:.8rem; margin:6px 0 0; }
-  details { margin-top:8px; } summary { cursor:pointer; color:var(--sub); font-size:.9rem; }
-  #error { color:#ff9c9c; margin:12px 0 0; min-height:1.2em; }
-  dialog { border:1px solid var(--line); border-radius:16px; background:var(--card); color:var(--text); padding:14px; width:min(94vw,520px); }
-  dialog::backdrop { background:rgba(0,0,0,.7); }
-  .cam { position:relative; background:#000; border-radius:12px; overflow:hidden; }
+  .photo-actions .ghost { flex:1; min-width:120px; }
+  .preview { display:none; width:100%; max-height:240px; object-fit:contain; margin-top:10px; background:#000; }
+  .hint { color:var(--mute); font-size:12px; line-height:1.8; margin-top:8px; }
+  details { margin-top:14px; } summary { cursor:pointer; font-size:13px; color:var(--mute); }
+  #error { color:var(--err); margin-top:16px; min-height:1.2em; font-size:13px; }
+
+  /* カメラ */
+  dialog { border:1px solid var(--ink); border-radius:0; background:var(--bg); color:var(--ink); padding:16px; width:min(94vw,520px); }
+  dialog::backdrop { background:rgba(0,0,0,.72); }
+  .cam { position:relative; background:#000; overflow:hidden; }
   .cam video { display:block; width:100%; max-height:60vh; object-fit:cover; }
   .cam.mirror video { transform:scaleX(-1); }
-  .cam .guide { position:absolute; inset:12% 18%; border:2px dashed rgba(242,200,107,.85); border-radius:24px; pointer-events:none; }
+  .cam .guide { position:absolute; inset:12% 18%; border:1px solid rgba(255,255,255,.9); pointer-events:none; }
   .cam.mirror .guide { inset:8% 24%; border-radius:50%; }
-  .cam-actions { display:flex; gap:8px; margin-top:12px; }
-  .cam-actions .primary { flex:2; } .cam-actions .ghost { flex:1; }
-  #camError { color:#ff9c9c; margin:8px 0 0; min-height:1.2em; font-size:.85rem; }
-  #result { display:none; }
-  .hero { text-align:center; border-color:var(--accent); }
-  .hero .mode { font-size:1.9rem; font-weight:800; color:var(--accent); margin:0; letter-spacing:.08em; }
-  .hero .headline { font-size:1.05rem; margin:2px 0 10px; }
-  .hero .why { color:var(--sub); font-size:.85rem; margin:0 0 12px; }
-  .mantra { display:inline-block; padding:6px 16px; border:1px solid var(--accent); border-radius:999px; color:var(--accent); font-weight:700; }
-  h2 { font-size:1rem; margin:0 0 10px; color:var(--accent); }
-  .card p { margin:0 0 .8em; } .card p:last-child { margin-bottom:0; }
-  .meters { display:grid; gap:10px; }
-  .meter { display:grid; grid-template-columns:5.5em 1fr 2.5em; align-items:center; gap:8px; font-size:.9rem; }
-  .bar { height:10px; border-radius:6px; background:var(--card2); overflow:hidden; }
-  .bar i { display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--ok)); }
-  .facts { display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:.85rem; }
-  .facts div { background:var(--card2); border-radius:10px; padding:8px 10px; line-height:1.5; }
-  .facts b { display:block; color:var(--sub); font-weight:400; font-size:.75rem; }
-  dl { margin:0; } dt { font-weight:600; margin-top:12px; } dt:first-child { margin-top:0; } dd { margin:2px 0 0; color:#dcdff7; }
-  ol.missions { margin:0; padding:0; list-style:none; counter-reset:m; }
-  ol.missions li { counter-increment:m; position:relative; padding:0 0 12px 2.2em; }
-  ol.missions li::before { content:counter(m); position:absolute; left:0; top:.2em; width:1.6em; height:1.6em; border-radius:50%; background:var(--accent); color:#222; font-weight:700; text-align:center; line-height:1.6em; font-size:.85rem; }
-  ol.missions li:last-child { padding-bottom:0; }
-  ol.missions b { display:block; } ol.missions span { color:var(--sub); font-size:.88rem; }
-  .copy { margin-top:12px; width:100%; }
-  .notice { color:var(--sub); font-size:.75rem; text-align:center; margin-top:24px; }
+  .cam-actions { display:flex; gap:8px; margin-top:14px; }
+  .cam-actions .primary { flex:2; padding:12px; } .cam-actions .ghost { flex:1; }
+  #camError { color:var(--err); margin-top:8px; min-height:1.2em; font-size:12px; }
+
+  /* 結果 */
+  #result { display:none; margin-top:40px; }
+  #result > * { animation:reveal .7s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes reveal { from { clip-path:inset(0 0 100% 0); opacity:.2; } to { clip-path:inset(0 0 0 0); opacity:1; } }
+  @media (prefers-reduced-motion:reduce) { #result > * { animation:none; } }
+
+  .hero { background:var(--panel); color:#fff; padding:28px 24px 28px; border:0; margin-bottom:8px; }
+  .hero .date { font-size:12px; letter-spacing:.08em; color:#bdb8b8; margin-bottom:20px; }
+  .hero .vert { display:flex; flex-direction:row-reverse; justify-content:flex-start; gap:22px; height:15.5em; margin-bottom:22px; font-family:var(--serif); }
+  .hero .vmode { writing-mode:vertical-rl; font-size:2.6rem; font-weight:600; letter-spacing:.14em; line-height:1.2; }
+  .hero .vmantra { writing-mode:vertical-rl; font-size:1rem; font-weight:500; letter-spacing:.3em; line-height:1.6; color:#e6e2e2; padding-top:.5em; }
+  .hero .headline { font-size:15px; font-weight:500; letter-spacing:.06em; }
+  .hero .why { font-size:12px; color:#bdb8b8; margin-top:8px; line-height:1.9; }
+  .hero .tag { border-color:#bdb8b8; color:#e6e2e2; margin-bottom:14px; }
+
+  .meters { display:grid; gap:16px; }
+  .meter { display:grid; grid-template-columns:4.5em 1fr 2.6em; align-items:center; gap:12px; font-size:13px; }
+  .bar { height:2px; background:var(--line); } .bar i { display:block; height:100%; background:var(--ink); }
+  .meter .v { font-family:Inter,sans-serif; text-align:right; letter-spacing:0; }
+
+  dl.rows dt { margin-top:18px; } dl.rows dt:first-child { margin-top:0; }
+  dl.rows dd { margin-top:6px; }
+  dl.short { display:grid; grid-template-columns:max-content 1fr; column-gap:24px; }
+  dl.short dt, dl.short dd { padding:10px 0; border-bottom:1px solid var(--line); margin:0; }
+  dl.short dt { font-size:12px; color:var(--mute); } dl.short dt:first-child, dl.short dd:nth-child(2) { border-top:1px solid var(--line); }
+
+  ol.missions { list-style:none; counter-reset:m; }
+  ol.missions li { counter-increment:m; display:grid; grid-template-columns:2.6em 1fr; padding:14px 0; border-top:1px solid var(--line); }
+  ol.missions li:first-child { border-top:0; padding-top:0; }
+  ol.missions li::before { grid-row:1 / span 2; content:counter(m, decimal-leading-zero); font-family:Inter,sans-serif; letter-spacing:0; color:var(--mute); }
+  ol.missions b { display:block; font-weight:500; } ol.missions span { display:block; color:var(--mute); font-size:13px; }
+  .copy { margin-top:16px; width:100%; }
+
+  .facts { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--line); border-left:1px solid var(--line); font-size:13px; }
+  .facts div { padding:10px 12px; border-right:1px solid var(--line); border-bottom:1px solid var(--line); line-height:1.6; }
+  .facts b { display:block; font-weight:400; font-size:11px; color:var(--mute); }
+
+  .notice { color:var(--mute); font-size:11px; line-height:1.8; margin-top:40px; padding-top:20px; border-top:1px solid var(--line); }
+  .notice .copy-line { display:block; margin-top:8px; }
+  @media (min-width:960px) { .notice .copy-line { display:none; } }
 </style>
 </head>
 <body>
+<header class="site">
+  <p class="legal">今日の調子 × 運気</p>
+  <h1>kotowari<br>今日のやる気ナビ</h1>
+  <p class="en">Daily<br>Motivation<br>Navigator</p>
+</header>
+<p class="rail" aria-hidden="true">© kotowari</p>
+
 <main>
-  <h1>kotowari 今日のやる気ナビ</h1>
-  <p class="lead">今日の調子と運気を掛け合わせて、やる気のスイッチを入れます</p>
+  <p class="lead">今日の調子と運気を掛け合わせて、やる気のスイッチを入れます。</p>
 
   <form id="form" novalidate>
-    <section class="card">
-      <p class="step">STEP 1 ｜ 今日の調子</p>
+    <section class="block">
+      <p class="step"><span class="tag">STEP 1</span>今日の調子</p>
       <fieldset>
         <legend>いまの調子は?</legend>
         <div class="energy" id="energyBox"></div>
@@ -104,17 +165,17 @@
         <div class="chips" id="focusBox"></div>
       </fieldset>
       <div>
-        <label for="memo">ひとこと <span class="opt">(任意・今日の意気込みや悩み)</span></label>
+        <label for="memo">ひとこと <span class="opt">任意・今日の意気込みや悩み</span></label>
         <textarea id="memo" maxlength="200" placeholder="例: 午後の商談が少し不安。でも準備はできている。"></textarea>
       </div>
     </section>
 
-    <section class="card">
-      <p class="step">STEP 2 ｜ 今日の表情 <span class="opt">(任意)</span></p>
+    <section class="block">
+      <p class="step"><span class="tag">STEP 2</span>今日の表情 <span class="opt">任意</span></p>
       <div class="photo-actions">
-        <button type="button" class="ghost" id="faceCam">📷 顔を撮影</button>
-        <button type="button" class="ghost" id="faceFileBtn">🖼 ファイルを選択</button>
-        <button type="button" class="ghost" id="faceClear" hidden>✕ 削除</button>
+        <button type="button" class="ghost" id="faceCam">カメラで撮影</button>
+        <button type="button" class="ghost" id="faceFileBtn">ファイルを選択</button>
+        <button type="button" class="ghost" id="faceClear" hidden>削除</button>
       </div>
       <input type="file" id="faceFile" accept="image/*" hidden>
       <input type="file" id="faceCapture" accept="image/*" capture="user" hidden>
@@ -122,25 +183,25 @@
       <p class="hint">表情や明るさの「印象」だけを読みます。年齢・健康状態・個人の特定などは行いません。写真は解析にのみ使用し、保存しません。</p>
     </section>
 
-    <section class="card">
-      <p class="step">STEP 3 ｜ 占いの背景</p>
+    <section class="block">
+      <p class="step"><span class="tag">STEP 3</span>生まれの情報</p>
       <div class="row">
         <div>
           <label for="birthDate">生年月日</label>
           <input type="date" id="birthDate" required min="1900-01-01">
         </div>
         <div>
-          <label for="birthTime">出生時刻 <span class="opt">(任意)</span></label>
+          <label for="birthTime">出生時刻 <span class="opt">任意</span></label>
           <input type="time" id="birthTime">
         </div>
       </div>
-      <p class="hint">星座・数秘術・四柱推命・月齢から、今日の気の流れを計算して診断の背景にします。生年月日はこの端末にだけ記憶されます。</p>
+      <p class="hint">星座・数秘術・四柱推命・月齢から、今日の運気の流れを計算します。生年月日はこの端末にだけ記憶されます。</p>
       <details>
         <summary>手相も加える(任意)</summary>
-        <div class="photo-actions" style="margin-top:10px">
-          <button type="button" class="ghost" id="palmCam">📷 手相を撮影</button>
-          <button type="button" class="ghost" id="palmFileBtn">🖼 ファイルを選択</button>
-          <button type="button" class="ghost" id="palmClear" hidden>✕ 削除</button>
+        <div class="photo-actions" style="margin-top:12px">
+          <button type="button" class="ghost" id="palmCam">カメラで撮影</button>
+          <button type="button" class="ghost" id="palmFileBtn">ファイルを選択</button>
+          <button type="button" class="ghost" id="palmClear" hidden>削除</button>
         </div>
         <input type="file" id="palmFile" accept="image/*" hidden>
         <input type="file" id="palmCapture" accept="image/*" capture="environment" hidden>
@@ -151,7 +212,7 @@
 
     <p id="error" role="alert"></p>
     <p id="mode" class="hint"></p>
-    <button type="submit" id="submit" class="primary">今日のスイッチを入れる</button>
+    <button type="submit" id="submit" class="primary" style="margin-top:20px">今日のスイッチを入れる</button>
   </form>
 
   <dialog id="camDialog" aria-label="撮影">
@@ -169,7 +230,7 @@
 
   <section id="result" aria-live="polite"></section>
 
-  <p class="notice">この診断はエンターテインメント目的です。健康・医療・投資などの判断は専門家にご相談ください。</p>
+  <p class="notice">この診断はエンターテインメント目的です。健康・医療・投資などの判断は専門家にご相談ください。<span class="copy-line">© kotowari</span></p>
 </main>
 <script type="module" src="app.js"></script>
 </body>

@@ -1,11 +1,11 @@
 // 「今日の調子」の選択肢と検証。ブラウザ(入力UI)とサーバー(受信検証)で共有する
 
 export const ENERGY = [
-  { v: 1, emoji: '😫', label: 'ぐったり' },
-  { v: 2, emoji: '😕', label: 'いまいち' },
-  { v: 3, emoji: '😐', label: 'ふつう' },
-  { v: 4, emoji: '🙂', label: '好調' },
-  { v: 5, emoji: '😄', label: '絶好調' },
+  { v: 1, label: 'ぐったり' },
+  { v: 2, label: 'いまいち' },
+  { v: 3, label: 'ふつう' },
+  { v: 4, label: '好調' },
+  { v: 5, label: '絶好調' },
 ];
 export const SLEEP = ['短め', 'ふつう', 'しっかり'];
 export const MOOD = ['前向き', '落ち着いている', '不安', '疲れ気味', 'イライラ'];
