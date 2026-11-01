@@ -45,6 +45,7 @@
   h2::before { content:"/ "; color:var(--mute); }
   .step { display:flex; align-items:center; gap:10px; margin-bottom:18px; font-size:14px; font-weight:500; letter-spacing:.1em; }
   .card p + p { margin-top:.9em; }
+  .more-body p { text-wrap:pretty; }
 
   /* フォーム */
   fieldset { border:0; margin-bottom:22px; min-width:0; }
@@ -127,7 +128,38 @@
   ol.missions b { display:block; font-weight:500; } ol.missions span { display:block; color:var(--mute); font-size:13px; }
   .copy { margin-top:16px; width:100%; }
 
-  .face-keyword { display:inline-block; font-size:12px; line-height:1.5; padding:0 8px; border:1px solid var(--ink); letter-spacing:.1em; margin-bottom:.6em; }
+  /* ひとこと見出し・アコーディオン・ビジュアル */
+  .pull { text-wrap:balance; word-break:auto-phrase; font-family:var(--serif); font-size:clamp(1.2rem, 5.6vw, 1.4rem); font-weight:600; line-height:1.65; letter-spacing:.06em; margin:0; }
+  details.more { margin-top:16px; border-top:1px solid var(--line); }
+  details.more summary { list-style:none; display:flex; justify-content:space-between; align-items:center; padding-top:12px; font-size:13px; color:var(--mute); cursor:pointer; user-select:none; }
+  details.more summary::-webkit-details-marker { display:none; }
+  details.more summary::after { content:"+"; font-family:Inter,sans-serif; font-size:20px; line-height:1; color:var(--ink); }
+  details.more[open] summary::after { content:"−"; }
+  details.more .when-open { display:none; } details.more[open] .when-closed { display:none; } details.more[open] .when-open { display:inline; }
+  .more-body { padding-top:14px; }
+  .face-row { display:flex; gap:18px; align-items:center; }
+  .face-shot { width:92px; height:92px; flex:none; object-fit:cover; background:#000; filter:grayscale(1) contrast(1.05); }
+  .face-text { min-width:0; }
+  .face-keyword { font-family:var(--serif); font-size:1.5rem; font-weight:600; letter-spacing:.14em; line-height:1.4; margin:0 0 4px !important; }
+  .face-summary { text-wrap:balance; word-break:auto-phrase; font-size:14px; margin:0 !important; }
+  .fortune { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:8px 28px; }
+  .wheel { width:200px; height:200px; flex:none; overflow:visible; color:var(--ink); }
+  .wheel .edge { fill:none; stroke:var(--line); stroke-width:1; }
+  .wheel .node { fill:#fff; stroke:var(--mute); stroke-width:1; }
+  .wheel .node.birth { fill:var(--ink); stroke:var(--ink); }
+  .wheel .node.today { stroke:var(--ink); stroke-width:2.6; }
+  .wheel .glyph { font-family:var(--serif); font-size:15px; font-weight:600; text-anchor:middle; dominant-baseline:central; fill:var(--ink); letter-spacing:0; }
+  .wheel .glyph.on-birth { fill:#fff; }
+  .wheel .cap { font-size:10.5px; font-weight:500; text-anchor:middle; dominant-baseline:central; fill:var(--mute); letter-spacing:.04em; }
+  .wheel .link { fill:none; stroke:var(--ink); stroke-width:1.2; stroke-dasharray:3 3; marker-end:url(#arrow); }
+  .fortune-side { flex:1; min-width:170px; }
+  .fortune-title { text-wrap:balance; font-family:var(--serif); font-size:1.4rem; font-weight:600; letter-spacing:.1em; line-height:1.5; margin:0 !important; }
+  .fortune-short { text-wrap:balance; word-break:auto-phrase; font-size:14px; margin:2px 0 8px !important; }
+  .fortune-pair { font-size:12px; color:var(--mute); margin:0 !important; }
+  .moon-row { display:flex; align-items:center; gap:10px; margin-top:14px; font-size:12px; color:var(--mute); }
+  .moon { width:38px; height:38px; flex:none; }
+  .moon .rim { fill:none; stroke:var(--ink); stroke-width:1.4; }
+  .moon .lit { fill:var(--ink); }
   .facts { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--line); border-left:1px solid var(--line); font-size:13px; }
   .facts div { padding:10px 12px; border-right:1px solid var(--line); border-bottom:1px solid var(--line); line-height:1.6; }
   .facts b { display:block; font-weight:400; font-size:11px; color:var(--mute); }

@@ -1,5 +1,6 @@
 import { buildFacts } from './lib/calc.js';
-import { fallbackReading } from './lib/fallback.js';
+import { fallbackReading, RELATION } from './lib/fallback.js';
+import { wheelNodes, moonShape } from './lib/visual.js';
 import { ENERGY, SLEEP, MOOD, FOCUS, normalizeCondition } from './lib/condition.js';
 
 const $ = (id) => document.getElementById(id);
@@ -219,6 +220,102 @@ function summaryText(r, facts) {
   return lines.join('\n');
 }
 
+// 見出しの保険(AI が要約を返さなかったとき): 本文の最初の一文。長ければ読点で区切って短くする(途中では切らない)
+const firstSentence = (text, max = 26) => {
+  const sentence = String(text ?? '').split(/[。\n]/)[0];
+  if (sentence.length <= max) return sentence;
+  let out = '';
+  for (const clause of sentence.split('、')) {
+    if ((out + clause).length > max) break;
+    out += (out ? '、' : '') + clause;
+  }
+  return out || sentence.slice(0, max);
+};
+
+// 詳細を畳むアコーディオン(summary の開閉ラベルは CSS で切り替える)
+function more(children, label = 'くわしく読む') {
+  const d = el('details', 'more');
+  const summary = el('summary');
+  summary.append(el('span', 'when-closed', label), el('span', 'when-open', '閉じる'));
+  const body = el('div', 'more-body');
+  body.append(...children);
+  d.append(summary, body);
+  return d;
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs = {}, text) {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+// 五行の円環: あなたの日柱の五行(黒塗り)と今日の日柱の五行(太い輪)を、相生の順に並べて矢印で結ぶ
+function wheelSvg(rel) {
+  const svg = svgEl('svg', { class: 'wheel', viewBox: '0 0 200 200', role: 'img', 'aria-label': `五行: あなたは${rel.birthElement}、今日は${rel.todayElement}` });
+  const defs = svgEl('defs');
+  const marker = svgEl('marker', { id: 'arrow', viewBox: '0 0 8 8', refX: '7', refY: '4', markerWidth: '7', markerHeight: '7', orient: 'auto' });
+  marker.append(svgEl('path', { d: 'M0 0 L8 4 L0 8 z', fill: 'currentColor' }));
+  defs.append(marker);
+  svg.append(defs);
+
+  const R = 58, NODE = 16;
+  const nodes = wheelNodes(100, 100, R);
+  svg.append(svgEl('polygon', { class: 'edge', points: nodes.map((n) => `${n.x.toFixed(1)},${n.y.toFixed(1)}`).join(' ') }));
+
+  const birth = nodes.find((n) => n.name === rel.birthElement);
+  const today = nodes.find((n) => n.name === rel.todayElement);
+  if (birth !== today) {
+    // 矢印は「気の働きかけの向き」。自分が与える/制する日は あなた→今日、今日の気に助けられる/制される日は 今日→あなた
+    const [from, to] = ['receives', 'controlled'].includes(rel.kind) ? [today, birth] : [birth, today];
+    const dx = to.x - from.x, dy = to.y - from.y, len = Math.hypot(dx, dy), u = [dx / len, dy / len];
+    const g = NODE + 4;
+    svg.append(svgEl('line', { class: 'link', x1: (from.x + u[0] * g).toFixed(1), y1: (from.y + u[1] * g).toFixed(1), x2: (to.x - u[0] * g).toFixed(1), y2: (to.y - u[1] * g).toFixed(1) }));
+  }
+
+  for (const n of nodes) {
+    const cls = ['node', n === birth ? 'birth' : '', n === today ? 'today' : ''].filter(Boolean).join(' ');
+    svg.append(svgEl('circle', { class: cls, cx: n.x.toFixed(1), cy: n.y.toFixed(1), r: NODE }));
+    svg.append(svgEl('text', { class: n === birth ? 'glyph on-birth' : 'glyph', x: n.x.toFixed(1), y: n.y.toFixed(1) }, n.name));
+  }
+  // 「あなた」「今日」のキャプションは、ノードの外側(円環の中心から離れる向き)に置く
+  const cap = (n, label) => svg.append(svgEl('text', { class: 'cap', x: (100 + (R + NODE + 11) * Math.cos(n.angle)).toFixed(1), y: (100 + (R + NODE + 11) * Math.sin(n.angle)).toFixed(1) }, label));
+  cap(birth, birth === today ? 'あなた・今日' : 'あなた');
+  if (birth !== today) cap(today, '今日');
+  return svg;
+}
+
+// 月の満ち欠け: 光っている側を黒で塗る
+function moonSvg(age) {
+  const svg = svgEl('svg', { class: 'moon', viewBox: '-22 -22 44 44', role: 'img', 'aria-label': `月齢${age}` });
+  const shape = moonShape(age, 16);
+  if (shape.lit) {
+    const path = svgEl('path', { class: 'lit', d: shape.lit });
+    if (shape.waning) path.setAttribute('transform', 'scale(-1 1)');
+    svg.append(path);
+  }
+  svg.append(svgEl('circle', { class: 'rim', cx: '0', cy: '0', r: '16' }));
+  return svg;
+}
+
+function fortuneBlock(facts, background) {
+  const rel = facts.relation;
+  const [title, , short] = RELATION[rel.kind];
+  const side = el('div', 'fortune-side');
+  const moonRow = el('div', 'moon-row');
+  moonRow.append(moonSvg(facts.today.moon.age), el('span', null, `${facts.today.moon.phase}(月齢 ${facts.today.moon.age})`));
+  side.append(
+    el('p', 'fortune-title', title),
+    el('p', 'fortune-short', short),
+    el('p', 'fortune-pair', `あなた ${facts.dayPillar.name}(${rel.birthElement})｜今日 ${facts.today.dayPillar.name}(${rel.todayElement})`),
+    moonRow,
+  );
+  const box = el('div', 'fortune');
+  box.append(wheelSvg(rel), side);
+  return [box, more(paragraphs(background))];
+}
+
 function render({ facts, reading: r }) {
   const out = $('result');
   out.replaceChildren();
@@ -234,19 +331,35 @@ function render({ facts, reading: r }) {
   out.append(hero);
 
   out.append(card('今日のコンディション', [meters(r.meter)]));
-  out.append(card('今日の応援メッセージ', paragraphs(r.boost)));
+  // 応援メッセージ: 見出し(ひとこと)だけを見せ、本文は畳む
+  out.append(card('今日の応援メッセージ', [
+    el('p', 'pull', r.boost_title || firstSentence(r.boost)),
+    more(paragraphs(r.boost), 'メッセージを読む'),
+  ]));
 
   if (r.face?.observed) {
-    const kw = r.face.keyword ? [el('p', null, r.face.keyword)] : [];
-    if (kw.length) kw[0].className = 'face-keyword';
-    out.append(card('今日の表情', [...kw, ...paragraphs(r.face.impression), ...paragraphs(r.face.tip), el('p', 'hint', '写真1枚から受ける見た目の印象です。体調や性格を判定するものではありません。')]));
+    const row = el('div', 'face-row');
+    if (face.image) {
+      const shot = el('img', 'face-shot');
+      shot.src = face.image;
+      shot.alt = '';
+      row.append(shot);
+    }
+    const text = el('div', 'face-text');
+    if (r.face.keyword) text.append(el('p', 'face-keyword', r.face.keyword));
+    text.append(el('p', 'face-summary', r.face.summary || firstSentence(r.face.impression, 32)));
+    row.append(text);
+    out.append(card('今日の表情', [
+      row,
+      more([...paragraphs(r.face.impression), ...paragraphs(r.face.tip), el('p', 'hint', '写真1枚から受ける見た目の印象です。体調や性格を判定するものではありません。')]),
+    ]));
   } else if (face.image) {
     out.append(card('今日の表情', paragraphs(
       r.source === 'fallback' ? '表情の読み取りはAI連携(サーバー版)で利用できます。'
       : '顔を読み取れませんでした。明るい場所で、顔全体が写るように撮り直してください。')));
   }
 
-  out.append(card('今日の運気の流れ', paragraphs(r.background)));
+  out.append(card('今日の運気の流れ', fortuneBlock(facts, r.background)));
 
   if (r.schedule) {
     out.append(card('今日の時間の使い方', [defList([['午前', r.schedule.morning], ['午後', r.schedule.afternoon], ['夕方〜夜', r.schedule.evening]])]));
