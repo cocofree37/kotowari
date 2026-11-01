@@ -24,8 +24,9 @@ function radioGroup(box, name, items, { energy = false } = {}) {
     const input = Object.assign(document.createElement('input'), { type: 'radio', name, value });
     const span = document.createElement('span');
     if (energy) {
-      const b = document.createElement('b'); b.textContent = String(it.v);
-      span.append(b, document.createTextNode(it.label));
+      // 調子のアイコン(太陽と水平線)。意味はラベル文字が担うので alt は空
+      const img = Object.assign(new Image(), { src: `img/energy-${it.v}.png`, alt: '', width: 96, height: 96 });
+      span.append(img, document.createTextNode(it.label));
     } else {
       span.textContent = it;
     }

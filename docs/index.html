@@ -62,10 +62,10 @@
   .chips input:checked + span, .energy input:checked + span { background:var(--ink); color:#fff; border-color:var(--ink); }
   .chips input:focus-visible + span, .energy input:focus-visible + span { outline:2px solid var(--ink); outline-offset:2px; }
   .energy { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
-  .energy span { display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px 6px; border:1px solid var(--mute); background:#fff; cursor:pointer; font-size:11px; color:var(--mute); }
-  .energy span b { font-family:Inter,sans-serif; font-weight:400; font-size:1.5rem; line-height:1.2; color:var(--ink); letter-spacing:0; }
+  .energy span { display:flex; flex-direction:column; align-items:center; gap:2px; padding:6px 2px 8px; border:1px solid var(--mute); background:#fff; cursor:pointer; font-size:11px; color:var(--mute); }
+  .energy span img { display:block; width:100%; max-width:84px; height:auto; aspect-ratio:1; }
   .energy input:checked + span { color:#fff; }
-  .energy input:checked + span b { color:#fff; }
+  .energy input:checked + span img { filter:invert(1); } /* 白地に黒線 → 選択中の黒地に白線 */
 
   /* ボタン */
   .primary { width:100%; padding:16px; border:0; border-radius:0; background:var(--ink); color:#fff; font-size:15px; letter-spacing:.16em; }
