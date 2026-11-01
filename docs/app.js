@@ -1,10 +1,14 @@
 import { buildFacts } from './lib/calc.js';
 import { fallbackReading } from './lib/fallback.js';
+import { ENERGY, SLEEP, MOOD, FOCUS, normalizeCondition } from './lib/condition.js';
 
 const $ = (id) => document.getElementById(id);
 const form = $('form');
-let palmImage = null;
-let stream = null;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* 保存できなくても動作に影響なし */ } },
+};
 
 function todayLocal() {
   const d = new Date();
@@ -12,7 +16,40 @@ function todayLocal() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-// ---- 手相画像: 長辺1024pxに縮小してJPEG化 ----
+// ---- 入力UI(選択肢は lib/condition.js が正) ----
+function radioGroup(box, name, items, { energy = false } = {}) {
+  for (const it of items) {
+    const value = energy ? it.v : it;
+    const label = document.createElement('label');
+    const input = Object.assign(document.createElement('input'), { type: 'radio', name, value });
+    const span = document.createElement('span');
+    if (energy) {
+      const b = document.createElement('b'); b.textContent = it.emoji;
+      span.append(b, document.createTextNode(it.label));
+    } else {
+      span.textContent = it;
+    }
+    label.append(input, span);
+    box.append(label);
+  }
+}
+radioGroup($('energyBox'), 'energy', ENERGY, { energy: true });
+radioGroup($('sleepBox'), 'sleep', SLEEP);
+radioGroup($('moodBox'), 'mood', MOOD);
+radioGroup($('focusBox'), 'focus', FOCUS);
+
+const saved = store.get('kotowari.birth');
+if (saved) {
+  try {
+    const { date, time } = JSON.parse(saved);
+    $('birthDate').value = date || '';
+    $('birthTime').value = time || '';
+  } catch { /* 壊れた値は無視 */ }
+}
+
+const picked = (name) => form.querySelector(`input[name="${name}"]:checked`)?.value;
+
+// ---- 写真: 長辺1024pxに縮小してJPEG化 ----
 function scaleToJpeg(source, w, h) {
   const scale = Math.min(1, 1024 / Math.max(w, h));
   const c = document.createElement('canvas');
@@ -32,28 +69,10 @@ function resizeFile(file) {
   });
 }
 
-function setPalm(dataUrl) {
-  palmImage = dataUrl;
-  $('preview').src = dataUrl || '';
-  $('preview').style.display = dataUrl ? 'block' : 'none';
-  $('palmClear').hidden = !dataUrl;
-}
-
-async function onFile(e) {
-  const file = e.target.files[0];
-  e.target.value = '';
-  $('error').textContent = '';
-  if (!file) return;
-  try { setPalm(await resizeFile(file)); } catch (err) { $('error').textContent = err.message; }
-}
-
-$('palmFile').addEventListener('change', onFile);
-$('palmCapture').addEventListener('change', onFile);
-$('fileOpen').addEventListener('click', () => $('palmFile').click());
-$('palmClear').addEventListener('click', () => setPalm(null));
-
-// ---- カメラ撮影 ----
+// ---- カメラ(顔・手相で共用) ----
 const canStream = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+let stream = null;
+let onShot = null;
 
 function stopStream() {
   if (stream) stream.getTracks().forEach((t) => t.stop());
@@ -61,15 +80,18 @@ function stopStream() {
   $('camVideo').srcObject = null;
 }
 
-$('camOpen').addEventListener('click', async () => {
-  // getUserMedia が使えない環境(古いブラウザ等)は、端末のカメラアプリ起動にフォールバック
-  if (!canStream) { $('palmCapture').click(); return; }
+async function openCamera({ facing, mirror, hint }, shot, fallbackInput) {
+  // getUserMedia が使えない環境は、端末のカメラアプリ起動にフォールバック
+  if (!canStream) { fallbackInput.click(); return; }
+  onShot = shot;
+  $('cam').classList.toggle('mirror', mirror);
+  $('camHint').textContent = hint;
   $('camError').textContent = '';
   $('camShoot').disabled = false;
   $('camDialog').showModal();
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1280 } },
+      video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 1280 } },
       audio: false,
     });
     $('camVideo').srcObject = stream;
@@ -81,16 +103,42 @@ $('camOpen').addEventListener('click', async () => {
       : err.name === 'NotFoundError' ? 'カメラが見つかりませんでした。「ファイルを選択」をご利用ください。'
       : 'カメラを起動できませんでした。「ファイルを選択」をご利用ください。';
   }
-});
+}
 
 $('camShoot').addEventListener('click', () => {
   const v = $('camVideo');
   if (!v.videoWidth) { $('camError').textContent = 'カメラの準備中です。少し待ってからもう一度お試しください。'; return; }
-  setPalm(scaleToJpeg(v, v.videoWidth, v.videoHeight));
+  onShot(scaleToJpeg(v, v.videoWidth, v.videoHeight));
   $('camDialog').close();
 });
 $('camClose').addEventListener('click', () => $('camDialog').close());
 $('camDialog').addEventListener('close', stopStream);
+
+function photoSlot(name, camOptions) {
+  const slot = { image: null };
+  const set = (dataUrl) => {
+    slot.image = dataUrl;
+    $(`${name}Preview`).src = dataUrl || '';
+    $(`${name}Preview`).style.display = dataUrl ? 'block' : 'none';
+    $(`${name}Clear`).hidden = !dataUrl;
+  };
+  const onFile = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    $('error').textContent = '';
+    if (!file) return;
+    try { set(await resizeFile(file)); } catch (err) { $('error').textContent = err.message; }
+  };
+  $(`${name}File`).addEventListener('change', onFile);
+  $(`${name}Capture`).addEventListener('change', onFile);
+  $(`${name}FileBtn`).addEventListener('click', () => $(`${name}File`).click());
+  $(`${name}Clear`).addEventListener('click', () => set(null));
+  $(`${name}Cam`).addEventListener('click', () => openCamera(camOptions, set, $(`${name}Capture`)));
+  return slot;
+}
+
+const face = photoSlot('face', { facing: 'user', mirror: true, hint: '枠の中に顔が入るようにして、明るい場所で撮影してください。' });
+const palm = photoSlot('palm', { facing: 'environment', mirror: false, hint: '枠の中に手のひら全体が入るようにして、線がはっきり見える明るさで撮影してください。' });
 
 // ---- 結果表示(すべて textContent で描画) ----
 const el = (tag, cls, txt) => {
@@ -99,13 +147,10 @@ const el = (tag, cls, txt) => {
   if (txt != null) e.textContent = txt;
   return e;
 };
+const paragraphs = (text) => String(text ?? '').split(/\n+/).filter(Boolean).map((t) => el('p', null, t));
 
-function paragraphs(text) {
-  return String(text ?? '').split(/\n{2,}|\n/).filter(Boolean).map((t) => el('p', null, t));
-}
-
-function card(title, children) {
-  const c = el('div', 'card');
+function card(title, children, cls) {
+  const c = el('div', cls ? `card ${cls}` : 'card');
   if (title) c.append(el('h2', null, title));
   c.append(...children);
   return c;
@@ -113,75 +158,102 @@ function card(title, children) {
 
 function defList(pairs) {
   const dl = el('dl');
-  for (const [term, desc, extra] of pairs) {
+  for (const [term, desc] of pairs) {
     if (!desc) continue;
-    const dt = el('dt', null, term);
-    if (extra) dt.append(el('span', 'stars', extra));
-    dl.append(dt, el('dd', null, desc));
+    dl.append(el('dt', null, term), el('dd', null, desc));
   }
   return dl;
 }
 
-const stars = (n) => {
-  const v = Math.max(1, Math.min(5, Number(n) || 3));
-  return '★'.repeat(v) + '☆'.repeat(5 - v);
-};
+const level = (n) => Math.max(1, Math.min(5, Number(n) || 3));
+
+function meters(m = {}) {
+  const box = el('div', 'meters');
+  for (const [label, key] of [['集中力', 'focus'], ['対人力', 'communication'], ['決断力', 'decision']]) {
+    const v = level(m[key]);
+    const row = el('div', 'meter');
+    const bar = el('div', 'bar');
+    const fill = el('i');
+    fill.style.width = `${v * 20}%`;
+    bar.append(fill);
+    row.append(el('span', null, label), bar, el('span', null, `${v}/5`));
+    box.append(row);
+  }
+  return box;
+}
+
+function summaryText(r, facts) {
+  const lines = [`【今日のやる気ナビ ${facts.today.date}】`, `${r.mode?.name || ''}｜${r.headline}`, `合言葉: ${r.mantra || ''}`, '', '今日のミッション'];
+  (r.missions || []).forEach((m, i) => lines.push(`${i + 1}. ${m.title}`));
+  if (r.lucky?.time) lines.push('', `勝負時間帯: ${r.lucky.time}`);
+  return lines.join('\n');
+}
 
 function render({ facts, reading: r }) {
   const out = $('result');
   out.replaceChildren();
 
-  const head = el('div', 'card');
-  head.append(el('p', 'headline', r.headline), ...paragraphs(r.overall));
-  out.append(head);
+  // 診断の核(モード・合言葉)
+  const hero = el('div', 'card hero');
+  hero.append(el('p', 'mode', r.mode?.name), el('p', 'headline', r.headline), el('p', 'why', r.mode?.reason));
+  if (r.mantra) hero.append(el('span', 'mantra', `「${r.mantra}」`));
+  out.append(hero);
 
-  if (r.personality) out.append(card('あなたの本質', paragraphs(r.personality)));
-  out.append(card(`${form.concern.value}について`, paragraphs(r.concern)));
+  out.append(card('今日のコンディション', [meters(r.meter)]));
+  out.append(card('今日の応援メッセージ', paragraphs(r.boost)));
 
-  const f = r.fortunes || {};
-  out.append(card('運勢', [defList([
-    ['恋愛運', f.love?.text, stars(f.love?.score)],
-    ['仕事運', f.work?.text, stars(f.work?.score)],
-    ['金運', f.money?.text, stars(f.money?.score)],
-  ])]));
+  if (r.face?.observed) {
+    out.append(card('今日の表情', [...paragraphs(r.face.impression), ...paragraphs(r.face.tip)]));
+  } else if (face.image) {
+    out.append(card('今日の表情', paragraphs(
+      r.source === 'fallback' ? '表情の読み取りはAI連携(サーバー版)で利用できます。'
+      : '顔を読み取れませんでした。明るい場所で、顔全体が写るように撮り直してください。')));
+  }
+
+  out.append(card('占いの背景', paragraphs(r.background)));
+
+  if (r.schedule) {
+    out.append(card('今日の時間の使い方', [defList([['午前', r.schedule.morning], ['午後', r.schedule.afternoon], ['夕方〜夜', r.schedule.evening]])]));
+  }
+
+  if (Array.isArray(r.missions) && r.missions.length) {
+    const ol = el('ol', 'missions');
+    for (const m of r.missions) {
+      const li = el('li');
+      li.append(el('b', null, m.title), el('span', null, m.why));
+      ol.append(li);
+    }
+    const c = card('今日のミッション', [ol]);
+    const copy = el('button', 'ghost copy', '📋 ミッションをコピー');
+    copy.type = 'button';
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(summaryText(r, facts)); copy.textContent = '✔ コピーしました'; }
+      catch { copy.textContent = 'コピーできませんでした'; }
+    });
+    c.append(copy);
+    out.append(c);
+  }
+
+  out.append(card('チーム・取引先とのコミュニケーション', paragraphs(r.communication)));
+  out.append(card('今日の落とし穴とリセット法', [defList([['落とし穴', r.pitfall], ['リセット法', r.reset]])]));
+
+  const l = r.lucky || {};
+  out.append(card('今日のラッキー', [defList([['勝負時間帯', l.time], ['ラッキーカラー', l.color], ['ラッキーアイテム', l.item], ['吉方位', l.direction]])]));
 
   const p = r.palm;
   if (p && p.detected) {
-    out.append(card('手相', [
-      ...paragraphs(p.summary),
-      defList([['生命線', p.life], ['感情線', p.heart], ['頭脳線', p.head], ['運命線', p.fate]]),
-    ]));
-  } else {
+    out.append(card('手相', [...paragraphs(p.summary), defList([['生命線', p.life], ['感情線', p.heart], ['頭脳線', p.head], ['運命線', p.fate]])]));
+  } else if (palm.image) {
     out.append(card('手相', paragraphs(
       r.source === 'fallback' ? '手相解析はAI連携(サーバー版)で利用できます。'
-      : palmImage ? '手のひらを読み取れませんでした。明るい場所で、手のひら全体が写るように撮り直してください。'
-      : '手相の写真を追加すると、手相も占えます。')));
+      : '手のひらを読み取れませんでした。明るい場所で、手のひら全体が写るように撮り直してください。')));
   }
 
-  if (r.timeline) {
-    out.append(card('今日の過ごし方', [defList([
-      ['朝', r.timeline.morning], ['昼', r.timeline.afternoon], ['夜', r.timeline.night],
-    ])]));
-  }
-  if (Array.isArray(r.actions) && r.actions.length) {
-    const ol = el('ol');
-    r.actions.forEach((a) => ol.append(el('li', null, a)));
-    out.append(card('今日のアクション', [ol]));
-  }
-  if (r.compatibility) out.append(card('相性', paragraphs(r.compatibility)));
-  if (r.caution) out.append(card('気をつけたいこと', paragraphs(r.caution)));
-
-  const l = r.lucky || {};
-  out.append(card('ラッキー', [defList([
-    ['ラッキーカラー', l.color], ['ラッキーアイテム', l.item], ['ラッキーナンバー', l.number],
-    ['吉方位', l.direction], ['開運アクション', l.action],
-  ])]));
-
+  const rel = facts.relation;
   const items = [
     ['太陽星座', facts.sunSign], ['ライフパス', String(facts.lifePath)],
-    ['干支', `${facts.eto.branch}(${facts.eto.animal})`], ['日柱', facts.dayPillar.name],
-    ['時支', facts.hourBranch || '不明'], ['今日の日柱', facts.today.dayPillar.name],
-    ['今日の月', `${facts.today.moon.phase}(${facts.today.moon.age})`],
+    ['干支', `${facts.eto.branch}(${facts.eto.animal})`], ['あなたの日柱', `${facts.dayPillar.name}(${rel.birthElement})`],
+    ['今日の日柱', `${facts.today.dayPillar.name}(${rel.todayElement})`], ['今日の月', `${facts.today.moon.phase}(${facts.today.moon.age})`],
   ];
   const grid = el('div', 'facts');
   for (const [k, v] of items) {
@@ -195,7 +267,7 @@ function render({ facts, reading: r }) {
   out.scrollIntoView({ behavior: 'smooth' });
 }
 
-// ---- 占う: サーバー(/api/reading)があれば Claude、無ければ(GitHub Pages 等)ブラウザ内の読み物 ----
+// ---- 診断: サーバー(/api/reading)があれば Claude、無ければ(GitHub Pages 等)ブラウザ内で組み立て ----
 async function requestReading(payload) {
   let res;
   try {
@@ -209,12 +281,12 @@ async function requestReading(payload) {
   }
   if (res && (res.headers.get('content-type') || '').includes('application/json')) {
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '占いに失敗しました');
+    if (!res.ok) throw new Error(data.error || '診断に失敗しました');
     return data;
   }
   const facts = buildFacts({ birthDate: payload.birthDate, birthTime: payload.birthTime, today: payload.today });
-  $('mode').textContent = '静的公開版のため、AIによる文章生成と手相解析は利用できません(算出データに基づく読み物です)。';
-  return { facts, reading: fallbackReading(facts, payload.concern, null, '静的公開版の簡易表示です') };
+  $('mode').textContent = '静的公開版のため、AIによる文章生成と顔・手相の読み取りは利用できません(入力内容と算出データに基づく診断です)。';
+  return { facts, reading: fallbackReading(facts, payload.condition, '静的公開版の簡易表示です') };
 }
 
 form.addEventListener('submit', async (e) => {
@@ -222,23 +294,33 @@ form.addEventListener('submit', async (e) => {
   const err = $('error');
   err.textContent = '';
   $('mode').textContent = '';
+
+  let condition;
+  try {
+    condition = normalizeCondition({
+      energy: picked('energy'), sleep: picked('sleep'), mood: picked('mood'), focus: picked('focus'), memo: $('memo').value,
+    });
+  } catch (ex) { err.textContent = ex.message; return; }
   if (!$('birthDate').value) { err.textContent = '生年月日を入力してください'; return; }
+
+  store.set('kotowari.birth', JSON.stringify({ date: $('birthDate').value, time: $('birthTime').value }));
 
   const btn = $('submit');
   btn.disabled = true;
-  btn.textContent = '星を読んでいます…(30秒ほどかかることがあります)';
+  btn.textContent = '診断しています…(30秒ほどかかることがあります)';
   try {
     render(await requestReading({
       birthDate: $('birthDate').value,
       birthTime: $('birthTime').value || null,
-      concern: form.concern.value,
-      palmImage,
+      condition,
+      faceImage: face.image,
+      palmImage: palm.image,
       today: todayLocal(),
     }));
   } catch (ex) {
     err.textContent = ex.message;
   } finally {
     btn.disabled = false;
-    btn.textContent = '占う';
+    btn.textContent = '今日のスイッチを入れる';
   }
 });

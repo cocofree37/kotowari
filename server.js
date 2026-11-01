@@ -3,12 +3,12 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFacts } from './docs/lib/calc.js';
+import { normalizeCondition } from './docs/lib/condition.js';
 import { generateReading } from './lib/reading.js';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), 'docs');
 const PORT = Number(process.env.PORT) || 3000;
 const MAX_BODY = 6 * 1024 * 1024;
-const CONCERNS = ['恋愛', '仕事', '金運', '人間関係'];
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 
 function readBody(req) {
@@ -32,10 +32,9 @@ function json(res, status, body) {
 
 async function handleReading(req, res) {
   try {
-    const { birthDate, birthTime, concern, palmImage, today } = JSON.parse(await readBody(req));
-    if (!CONCERNS.includes(concern)) return json(res, 400, { error: '悩みカテゴリが不正です' });
+    const { birthDate, birthTime, condition, faceImage, palmImage, today } = JSON.parse(await readBody(req));
     const facts = buildFacts({ birthDate, birthTime, today });
-    const reading = await generateReading({ facts, concern, palmImage });
+    const reading = await generateReading({ facts, condition: normalizeCondition(condition), faceImage, palmImage });
     json(res, 200, { facts, reading });
   } catch (e) {
     console.error(e);

@@ -11,6 +11,10 @@ const SIGNS = [
   ['天秤座', 9, 23], ['蠍座', 10, 24], ['射手座', 11, 23], ['山羊座', 12, 22],
 ];
 
+const ELEMENT = { 甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土', 己: '土', 庚: '金', 辛: '金', 壬: '水', 癸: '水' };
+const GENERATES = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' }; // 相生
+const CONTROLS = { 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' }; // 相剋
+
 const MOON_PHASES = ['新月', '三日月', '上弦の月', '十三夜', '満月', '十八夜', '下弦の月', '二十六夜'];
 
 function julianDayNumber(y, m, d) {
@@ -70,6 +74,19 @@ export function moonAge(y, m, d) {
   return { age: Math.round(age * 10) / 10, phase };
 }
 
+// 自分の日柱の五行(birth)と今日の日柱の五行(today)の関係
+export function elementRelation(birthStem, todayStem) {
+  const b = ELEMENT[birthStem];
+  const t = ELEMENT[todayStem];
+  let kind;
+  if (b === t) kind = 'same'; // 比和: 同じ気が重なる
+  else if (GENERATES[b] === t) kind = 'gives'; // 自分が今日の気を生む: 持ち出し・与える日
+  else if (GENERATES[t] === b) kind = 'receives'; // 今日の気が自分を生む: 追い風
+  else if (CONTROLS[b] === t) kind = 'controls'; // 自分が今日の気を制する: 主導権
+  else kind = 'controlled'; // 今日の気に制される: 試される日
+  return { birthElement: b, todayElement: t, kind };
+}
+
 export function parseDate(str) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || '');
   if (!m) return null;
@@ -90,6 +107,7 @@ export function buildFacts({ birthDate, birthTime, today }) {
     eto: etoOfYear(b.y, b.m, b.d),
     dayPillar: dayPillar(b.y, b.m, b.d),
     hourBranch: hourBranch(birthTime),
+    relation: elementRelation(dayPillar(b.y, b.m, b.d).stem, dayPillar(t.y, t.m, t.d).stem),
     today: {
       date: today,
       dayPillar: dayPillar(t.y, t.m, t.d),

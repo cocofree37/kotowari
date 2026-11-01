@@ -3,108 +3,163 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>星と手のひらの占い</title>
+<title>kotowari 今日のやる気ナビ</title>
 <style>
-  :root { --bg:#12122a; --card:#1c1c3d; --line:#33336b; --text:#ecebff; --sub:#a9a8d6; --accent:#f2c86b; }
+  :root { --bg:#10142b; --card:#1a2040; --card2:#141935; --line:#2f3a6e; --text:#eef0ff; --sub:#a4abd6; --accent:#f2c86b; --ok:#7fd6a8; }
   * { box-sizing: border-box; }
-  body { margin:0; background:radial-gradient(circle at 50% -10%, #2a2a63, var(--bg) 60%); color:var(--text);
+  body { margin:0; background:radial-gradient(circle at 50% -10%, #263066, var(--bg) 60%); color:var(--text);
          font-family:"Hiragino Sans","Yu Gothic",system-ui,sans-serif; line-height:1.8; min-height:100vh; }
-  main { max-width:600px; margin:0 auto; padding:24px 16px 64px; }
-  h1 { font-size:1.5rem; text-align:center; margin:8px 0 4px; letter-spacing:.08em; }
+  main { max-width:620px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:1.4rem; text-align:center; margin:8px 0 4px; letter-spacing:.06em; }
   .lead { text-align:center; color:var(--sub); margin:0 0 24px; font-size:.9rem; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px; }
+  .step { color:var(--accent); font-size:.8rem; font-weight:700; letter-spacing:.08em; margin:0 0 8px; }
   label, legend { display:block; font-weight:600; margin-bottom:6px; font-size:.9rem; }
   .opt { color:var(--sub); font-weight:400; font-size:.8rem; }
-  input[type=date], input[type=time], input[type=file] { width:100%; padding:10px; border-radius:10px; border:1px solid var(--line);
-         background:#14142f; color:var(--text); font-size:1rem; }
+  input[type=date], input[type=time], textarea { width:100%; padding:10px; border-radius:10px; border:1px solid var(--line);
+         background:var(--card2); color:var(--text); font:inherit; font-size:1rem; }
+  textarea { resize:vertical; min-height:72px; }
   .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  fieldset { border:0; padding:0; margin:0; }
+  fieldset { border:0; padding:0; margin:0 0 16px; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; }
   .chips label { margin:0; font-weight:400; }
   .chips input { position:absolute; opacity:0; }
-  .chips span { display:inline-block; padding:8px 16px; border:1px solid var(--line); border-radius:999px; cursor:pointer; }
+  .chips span { display:inline-block; padding:8px 14px; border:1px solid var(--line); border-radius:999px; cursor:pointer; }
   .chips input:checked + span { background:var(--accent); color:#222; border-color:var(--accent); font-weight:600; }
   .chips input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
+  .energy { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+  .energy label { margin:0; font-weight:400; }
+  .energy span { display:flex; flex-direction:column; align-items:center; padding:8px 2px; border:1px solid var(--line); border-radius:12px; cursor:pointer; font-size:.7rem; color:var(--sub); }
+  .energy span b { font-size:1.6rem; line-height:1.3; }
+  .energy input:checked + span { background:var(--accent); color:#222; border-color:var(--accent); font-weight:700; }
+  .energy input { position:absolute; opacity:0; }
+  .energy input:focus-visible + span { outline:2px solid var(--accent); outline-offset:2px; }
   button { font:inherit; cursor:pointer; }
   .primary { width:100%; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#222; font-size:1.05rem; font-weight:700; }
   .primary:disabled { opacity:.6; cursor:wait; }
-  .ghost { padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:#14142f; color:var(--text); }
-  .palm-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
-  .palm-actions .ghost { flex:1; min-width:140px; }
-  #preview { display:none; width:100%; max-height:240px; object-fit:contain; margin-top:10px; border-radius:10px; background:#000; }
+  .ghost { padding:10px 14px; border-radius:10px; border:1px solid var(--line); background:var(--card2); color:var(--text); }
+  .photo-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .photo-actions .ghost { flex:1; min-width:130px; }
+  .preview { display:none; width:100%; max-height:240px; object-fit:contain; margin-top:10px; border-radius:10px; background:#000; }
   .hint { color:var(--sub); font-size:.8rem; margin:6px 0 0; }
+  details { margin-top:8px; } summary { cursor:pointer; color:var(--sub); font-size:.9rem; }
   #error { color:#ff9c9c; margin:12px 0 0; min-height:1.2em; }
   dialog { border:1px solid var(--line); border-radius:16px; background:var(--card); color:var(--text); padding:14px; width:min(94vw,520px); }
   dialog::backdrop { background:rgba(0,0,0,.7); }
   .cam { position:relative; background:#000; border-radius:12px; overflow:hidden; }
   .cam video { display:block; width:100%; max-height:60vh; object-fit:cover; }
+  .cam.mirror video { transform:scaleX(-1); }
   .cam .guide { position:absolute; inset:12% 18%; border:2px dashed rgba(242,200,107,.85); border-radius:24px; pointer-events:none; }
+  .cam.mirror .guide { inset:8% 24%; border-radius:50%; }
   .cam-actions { display:flex; gap:8px; margin-top:12px; }
   .cam-actions .primary { flex:2; } .cam-actions .ghost { flex:1; }
   #camError { color:#ff9c9c; margin:8px 0 0; min-height:1.2em; font-size:.85rem; }
   #result { display:none; }
-  .headline { font-size:1.3rem; color:var(--accent); margin:0 0 10px; }
+  .hero { text-align:center; border-color:var(--accent); }
+  .hero .mode { font-size:1.9rem; font-weight:800; color:var(--accent); margin:0; letter-spacing:.08em; }
+  .hero .headline { font-size:1.05rem; margin:2px 0 10px; }
+  .hero .why { color:var(--sub); font-size:.85rem; margin:0 0 12px; }
+  .mantra { display:inline-block; padding:6px 16px; border:1px solid var(--accent); border-radius:999px; color:var(--accent); font-weight:700; }
   h2 { font-size:1rem; margin:0 0 10px; color:var(--accent); }
   .card p { margin:0 0 .8em; } .card p:last-child { margin-bottom:0; }
+  .meters { display:grid; gap:10px; }
+  .meter { display:grid; grid-template-columns:5.5em 1fr 2.5em; align-items:center; gap:8px; font-size:.9rem; }
+  .bar { height:10px; border-radius:6px; background:var(--card2); overflow:hidden; }
+  .bar i { display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--ok)); }
   .facts { display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:.85rem; }
-  .facts div { background:#14142f; border-radius:10px; padding:8px 10px; line-height:1.5; }
+  .facts div { background:var(--card2); border-radius:10px; padding:8px 10px; line-height:1.5; }
   .facts b { display:block; color:var(--sub); font-weight:400; font-size:.75rem; }
-  dl { margin:0; } dt { font-weight:600; margin-top:12px; } dt:first-child { margin-top:0; } dd { margin:2px 0 0; color:#d8d7f5; }
-  .stars { color:var(--accent); letter-spacing:.1em; margin-left:6px; font-weight:400; }
+  dl { margin:0; } dt { font-weight:600; margin-top:12px; } dt:first-child { margin-top:0; } dd { margin:2px 0 0; color:#dcdff7; }
+  ol.missions { margin:0; padding:0; list-style:none; counter-reset:m; }
+  ol.missions li { counter-increment:m; position:relative; padding:0 0 12px 2.2em; }
+  ol.missions li::before { content:counter(m); position:absolute; left:0; top:.2em; width:1.6em; height:1.6em; border-radius:50%; background:var(--accent); color:#222; font-weight:700; text-align:center; line-height:1.6em; font-size:.85rem; }
+  ol.missions li:last-child { padding-bottom:0; }
+  ol.missions b { display:block; } ol.missions span { color:var(--sub); font-size:.88rem; }
+  .copy { margin-top:12px; width:100%; }
   .notice { color:var(--sub); font-size:.75rem; text-align:center; margin-top:24px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>✦ 星と手のひらの占い ✦</h1>
-  <p class="lead">生年月日と手相から、今日のあなたを読み解きます</p>
+  <h1>kotowari 今日のやる気ナビ</h1>
+  <p class="lead">今日の調子と運気を掛け合わせて、やる気のスイッチを入れます</p>
 
-  <form id="form" class="card" novalidate>
-    <div class="row">
+  <form id="form" novalidate>
+    <section class="card">
+      <p class="step">STEP 1 ｜ 今日の調子</p>
+      <fieldset>
+        <legend>いまの調子は?</legend>
+        <div class="energy" id="energyBox"></div>
+      </fieldset>
+      <fieldset>
+        <legend>昨夜の睡眠</legend>
+        <div class="chips" id="sleepBox"></div>
+      </fieldset>
+      <fieldset>
+        <legend>いまの気分</legend>
+        <div class="chips" id="moodBox"></div>
+      </fieldset>
+      <fieldset>
+        <legend>今日の仕事の中心</legend>
+        <div class="chips" id="focusBox"></div>
+      </fieldset>
       <div>
-        <label for="birthDate">生年月日</label>
-        <input type="date" id="birthDate" required min="1900-01-01">
+        <label for="memo">ひとこと <span class="opt">(任意・今日の意気込みや悩み)</span></label>
+        <textarea id="memo" maxlength="200" placeholder="例: 午後の商談が少し不安。でも準備はできている。"></textarea>
       </div>
-      <div>
-        <label for="birthTime">出生時刻 <span class="opt">(任意)</span></label>
-        <input type="time" id="birthTime">
-      </div>
-    </div>
+    </section>
 
-    <fieldset style="margin-top:16px">
-      <legend>今いちばん気になること</legend>
-      <div class="chips">
-        <label><input type="radio" name="concern" value="恋愛" checked><span>恋愛</span></label>
-        <label><input type="radio" name="concern" value="仕事"><span>仕事</span></label>
-        <label><input type="radio" name="concern" value="金運"><span>金運</span></label>
-        <label><input type="radio" name="concern" value="人間関係"><span>人間関係</span></label>
+    <section class="card">
+      <p class="step">STEP 2 ｜ 今日の表情 <span class="opt">(任意)</span></p>
+      <div class="photo-actions">
+        <button type="button" class="ghost" id="faceCam">📷 顔を撮影</button>
+        <button type="button" class="ghost" id="faceFileBtn">🖼 ファイルを選択</button>
+        <button type="button" class="ghost" id="faceClear" hidden>✕ 削除</button>
       </div>
-    </fieldset>
+      <input type="file" id="faceFile" accept="image/*" hidden>
+      <input type="file" id="faceCapture" accept="image/*" capture="user" hidden>
+      <img id="facePreview" class="preview" alt="顔写真プレビュー">
+      <p class="hint">表情や明るさの「印象」だけを読みます。年齢・健康状態・個人の特定などは行いません。写真は解析にのみ使用し、保存しません。</p>
+    </section>
 
-    <div style="margin-top:16px">
-      <label>手相の写真 <span class="opt">(任意)</span></label>
-      <div class="palm-actions">
-        <button type="button" class="ghost" id="camOpen">📷 カメラで撮影</button>
-        <button type="button" class="ghost" id="fileOpen">🖼 ファイルを選択</button>
-        <button type="button" class="ghost" id="palmClear" hidden>✕ 写真を削除</button>
+    <section class="card">
+      <p class="step">STEP 3 ｜ 占いの背景</p>
+      <div class="row">
+        <div>
+          <label for="birthDate">生年月日</label>
+          <input type="date" id="birthDate" required min="1900-01-01">
+        </div>
+        <div>
+          <label for="birthTime">出生時刻 <span class="opt">(任意)</span></label>
+          <input type="time" id="birthTime">
+        </div>
       </div>
-      <input type="file" id="palmFile" accept="image/*" hidden>
-      <input type="file" id="palmCapture" accept="image/*" capture="environment" hidden>
-      <img id="preview" alt="手相プレビュー">
-      <p class="hint">手のひらを明るい場所で正面から撮影してください。画像は占いの解析にのみ使用し、保存しません。</p>
-    </div>
+      <p class="hint">星座・数秘術・四柱推命・月齢から、今日の気の流れを計算して診断の背景にします。生年月日はこの端末にだけ記憶されます。</p>
+      <details>
+        <summary>手相も加える(任意)</summary>
+        <div class="photo-actions" style="margin-top:10px">
+          <button type="button" class="ghost" id="palmCam">📷 手相を撮影</button>
+          <button type="button" class="ghost" id="palmFileBtn">🖼 ファイルを選択</button>
+          <button type="button" class="ghost" id="palmClear" hidden>✕ 削除</button>
+        </div>
+        <input type="file" id="palmFile" accept="image/*" hidden>
+        <input type="file" id="palmCapture" accept="image/*" capture="environment" hidden>
+        <img id="palmPreview" class="preview" alt="手相プレビュー">
+        <p class="hint">手のひらを明るい場所で正面から撮影してください。</p>
+      </details>
+    </section>
 
     <p id="error" role="alert"></p>
     <p id="mode" class="hint"></p>
-    <button type="submit" id="submit" class="primary">占う</button>
+    <button type="submit" id="submit" class="primary">今日のスイッチを入れる</button>
   </form>
 
-  <dialog id="camDialog" aria-label="手相を撮影">
-    <div class="cam">
+  <dialog id="camDialog" aria-label="撮影">
+    <div class="cam" id="cam">
       <video id="camVideo" playsinline muted></video>
       <div class="guide" aria-hidden="true"></div>
     </div>
-    <p class="hint">枠の中に手のひら全体が入るようにして、手相の線がはっきり見える明るさで撮影してください。</p>
+    <p class="hint" id="camHint"></p>
     <p id="camError" role="alert"></p>
     <div class="cam-actions">
       <button type="button" class="primary" id="camShoot">撮影する</button>
@@ -114,7 +169,7 @@
 
   <section id="result" aria-live="polite"></section>
 
-  <p class="notice">この占いはエンターテインメント目的です。健康・医療・投資などの判断は専門家にご相談ください。</p>
+  <p class="notice">この診断はエンターテインメント目的です。健康・医療・投資などの判断は専門家にご相談ください。</p>
 </main>
 <script type="module" src="app.js"></script>
 </body>

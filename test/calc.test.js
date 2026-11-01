@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dayPillar, sunSign, lifePathNumber, etoOfYear, hourBranch, buildFacts } from '../docs/lib/calc.js';
+import { dayPillar, sunSign, lifePathNumber, etoOfYear, hourBranch, buildFacts, elementRelation } from '../docs/lib/calc.js';
 
 test('日柱: 2000-01-01 は戊午', () => {
   assert.equal(dayPillar(2000, 1, 1).name, '戊午');
@@ -35,4 +35,13 @@ test('時支', () => {
 
 test('不正な日付はエラー', () => {
   assert.throws(() => buildFacts({ birthDate: '2001-02-30', today: '2026-09-19' }));
+});
+
+test('五行の関係', () => {
+  assert.equal(elementRelation('甲', '乙').kind, 'same'); // 木と木
+  assert.equal(elementRelation('甲', '丙').kind, 'gives'); // 木は火を生む
+  assert.equal(elementRelation('丙', '甲').kind, 'receives'); // 木が火を生む
+  assert.equal(elementRelation('甲', '戊').kind, 'controls'); // 木は土を剋す
+  assert.equal(elementRelation('戊', '甲').kind, 'controlled'); // 木に土は剋される
+  assert.deepEqual(buildFacts({ birthDate: '1990-05-15', today: '2026-11-01' }).relation.birthElement, '金'); // 庚辰
 });
