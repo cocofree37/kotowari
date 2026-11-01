@@ -1,0 +1,23 @@
+name = "kotowari-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+# 公開URLは workers.dev のみ。版ごとのプレビューURLは出さない
+workers_dev = true
+preview_urls = false
+
+[vars]
+ANTHROPIC_MODEL = "claude-sonnet-5-5"
+
+[observability]
+enabled = true
+
+# ANTHROPIC_API_KEY はここに書かず、`wrangler secret put ANTHROPIC_API_KEY` で登録します。
+
+# 診断(画像つき)は同じIPから1分あたり3回まで(費用の暴走防止)
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "2201"
+
+  [ratelimits.simple]
+  limit = 3
+  period = 60

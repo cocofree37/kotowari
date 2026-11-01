@@ -4,7 +4,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildFacts } from './docs/lib/calc.js';
 import { normalizeCondition } from './docs/lib/condition.js';
-import { generateReading } from './lib/reading.js';
+import { generateReading, InputError } from './lib/reading.js';
 
 const ROOT = join(fileURLToPath(new URL('.', import.meta.url)), 'docs');
 const PORT = Number(process.env.PORT) || 3000;
@@ -33,12 +33,16 @@ function json(res, status, body) {
 async function handleReading(req, res) {
   try {
     const { birthDate, birthTime, condition, faceImage, palmImage, today } = JSON.parse(await readBody(req));
-    const facts = buildFacts({ birthDate, birthTime, today });
-    const reading = await generateReading({ facts, condition: normalizeCondition(condition), faceImage, palmImage });
+    let facts, cond;
+    try { facts = buildFacts({ birthDate, birthTime, today }); cond = normalizeCondition(condition); } catch (e) { throw new InputError(e.message); }
+    const reading = await generateReading(
+      { facts, condition: cond, faceImage, palmImage },
+      { apiKey: process.env.ANTHROPIC_API_KEY, model: process.env.ANTHROPIC_MODEL || undefined, baseUrl: process.env.ANTHROPIC_BASE_URL || undefined },
+    );
     json(res, 200, { facts, reading });
   } catch (e) {
-    console.error(e);
-    json(res, 500, { error: e.message || '占いに失敗しました' });
+    if (!e.status) console.error(e);
+    json(res, e.status || 500, { error: e.message || '診断に失敗しました' });
   }
 }
 

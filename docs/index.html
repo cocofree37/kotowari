@@ -127,6 +127,7 @@
   ol.missions b { display:block; font-weight:500; } ol.missions span { display:block; color:var(--mute); font-size:13px; }
   .copy { margin-top:16px; width:100%; }
 
+  .face-keyword { display:inline-block; font-size:12px; line-height:1.5; padding:0 8px; border:1px solid var(--ink); letter-spacing:.1em; margin-bottom:.6em; }
   .facts { display:grid; grid-template-columns:1fr 1fr; border-top:1px solid var(--line); border-left:1px solid var(--line); font-size:13px; }
   .facts div { padding:10px 12px; border-right:1px solid var(--line); border-bottom:1px solid var(--line); line-height:1.6; }
   .facts b { display:block; font-weight:400; font-size:11px; color:var(--mute); }
@@ -182,7 +183,7 @@
       <input type="file" id="faceFile" accept="image/*" hidden>
       <input type="file" id="faceCapture" accept="image/*" capture="user" hidden>
       <img id="facePreview" class="preview" alt="顔写真プレビュー">
-      <p class="hint">表情や明るさの「印象」だけを読みます。年齢・健康状態・個人の特定などは行いません。写真は解析にのみ使用し、保存しません。</p>
+      <p class="hint">表情や明るさの「印象」だけを読みます。年齢・健康状態・個人の特定などは行いません。写真は表情の読み取りのため AI(Claude)に送信しますが、このアプリでは保存しません。</p>
     </section>
 
     <section class="block">
@@ -238,6 +239,7 @@
 
   <p class="notice">この診断はエンターテインメント目的です。健康・医療・投資などの判断は専門家にご相談ください。<span class="copy-line">© kotowari</span></p>
 </main>
+<script src="config.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>

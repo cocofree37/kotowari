@@ -237,7 +237,9 @@ function render({ facts, reading: r }) {
   out.append(card('今日の応援メッセージ', paragraphs(r.boost)));
 
   if (r.face?.observed) {
-    out.append(card('今日の表情', [...paragraphs(r.face.impression), ...paragraphs(r.face.tip)]));
+    const kw = r.face.keyword ? [el('p', null, r.face.keyword)] : [];
+    if (kw.length) kw[0].className = 'face-keyword';
+    out.append(card('今日の表情', [...kw, ...paragraphs(r.face.impression), ...paragraphs(r.face.tip), el('p', 'hint', '写真1枚から受ける見た目の印象です。体調や性格を判定するものではありません。')]));
   } else if (face.image) {
     out.append(card('今日の表情', paragraphs(
       r.source === 'fallback' ? '表情の読み取りはAI連携(サーバー版)で利用できます。'
@@ -301,11 +303,19 @@ function render({ facts, reading: r }) {
   out.scrollIntoView({ behavior: 'smooth' });
 }
 
-// ---- 診断: サーバー(/api/reading)があれば Claude、無ければ(GitHub Pages 等)ブラウザ内で組み立て ----
+// ---- 診断: AI連携(config.js の API_URL、またはローカルサーバーの /api/reading)があれば Claude、無ければブラウザ内で組み立て ----
+const API_URL = window.KOTOWARI_CONFIG?.API_URL || '';
+
+function localReading(payload, notice) {
+  const facts = buildFacts({ birthDate: payload.birthDate, birthTime: payload.birthTime, today: payload.today });
+  $('mode').textContent = notice;
+  return { facts, reading: fallbackReading(facts, payload.condition, '簡易表示です') };
+}
+
 async function requestReading(payload) {
   let res;
   try {
-    res = await fetch('api/reading', {
+    res = await fetch(API_URL || 'api/reading', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
@@ -313,14 +323,16 @@ async function requestReading(payload) {
   } catch {
     res = null;
   }
-  if (res && (res.headers.get('content-type') || '').includes('application/json')) {
+  const isJson = res && (res.headers.get('content-type') || '').includes('application/json');
+  if (isJson) {
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '診断に失敗しました');
-    return data;
+    if (res.ok) return data;
+    // 入力の誤り・回数制限(4xx)はそのまま伝える。サーバー側の不調(5xx)は簡易診断に切り替える
+    if (res.status < 500) throw new Error(data.error || '診断に失敗しました');
   }
-  const facts = buildFacts({ birthDate: payload.birthDate, birthTime: payload.birthTime, today: payload.today });
-  $('mode').textContent = '静的公開版のため、AIによる文章生成と顔・手相の読み取りは利用できません(入力内容と算出データに基づく診断です)。';
-  return { facts, reading: fallbackReading(facts, payload.condition, '静的公開版の簡易表示です') };
+  return localReading(payload, API_URL
+    ? 'AIに接続できなかったため、入力内容と算出データに基づく簡易診断を表示しています(表情・手相の読み取りは行われていません)。'
+    : '静的公開版のため、AIによる文章生成と顔・手相の読み取りは利用できません(入力内容と算出データに基づく診断です)。');
 }
 
 form.addEventListener('submit', async (e) => {
